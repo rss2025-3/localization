@@ -31,11 +31,11 @@ class SensorModel:
 
         ####################################
         # Adjust these parameters
-        self.alpha_hit = 0
-        self.alpha_short = 0
-        self.alpha_max = 0
-        self.alpha_rand = 0
-        self.sigma_hit = 0
+        self.alpha_hit = 0.74
+        self.alpha_short = 0.07
+        self.alpha_max = 0.07
+        self.alpha_rand = 0.12
+        self.sigma_hit = 8.0
 
         # Your sensor table will be a `table_width` x `table_width` np array:
         self.table_width = 201
@@ -87,7 +87,50 @@ class SensorModel:
             No return type. Directly modify `self.sensor_model_table`.
         """
 
-        raise NotImplementedError
+        def p_hit(zk, d, z_max):
+            eta = 1
+            sigma = self.sigma_hit
+            total = sum([eta * (1 / (np.sqrt(2 * np.pi) * sigma)) * np.exp(-((zk_i - d) ** 2) / (2 * sigma ** 2)) for zk_i in range(self.table_width)])
+            if (0 <= zk) and (zk <= z_max):
+                return eta * (1 / (np.sqrt(2 * np.pi) * sigma)) * np.exp(-((zk - d) ** 2) / (2 * sigma ** 2)) / total
+            else:
+                return 0
+
+        def p_short(zk, d, z_max):
+            if (0 <= zk) and (zk <= d) and (d != 0):
+                return (2 / d) * (1 - (zk / d))
+            else:
+                return 0
+
+        def p_max(zk, d, z_max):
+
+            if (zk == z_max):
+                return 1
+            else:
+                return 0
+
+        def p_rand(zk, d, z_max):
+
+            if (0 <= zk) and (zk <= z_max):
+                return 1 / z_max
+            else:
+                return 0
+        
+        def p_total(zk, d, z_max):
+            return (self.alpha_hit * p_hit(zk, d, z_max) +
+                    self.alpha_short * p_short(zk, d, z_max) +
+                    self.alpha_max * p_max(zk, d, z_max) +
+                    self.alpha_rand * p_rand(zk, d, z_max))
+
+        z_max = self.table_width - 1
+
+        for d_px in range(self.table_width):
+            for zk_px in range(self.table_width):
+                self.sensor_model_table[zk_px][d_px] = p_total(zk_px, d_px, z_max)
+        
+        self.sensor_model_table /= self.sensor_model_table.sum(axis=0)
+        
+
 
     def evaluate(self, particles, observation):
         """
@@ -122,6 +165,25 @@ class SensorModel:
         # This produces a matrix of size N x num_beams_per_particle 
 
         scans = self.scan_sim.scan(particles)
+        scans = scans / (self.resolution * self.lidar_scale_to_map_scale)
+        scans = np.clip(scans, 0, self.table_width)
+
+        observation = observation[::len(observation) // len(scans)]
+        observation = np.array(observation)
+        observation = observation / (self.resolution * self.lidar_scale_to_map_scale)
+        observation = np.clip(observation, 0, self.table_width)
+
+        output = np.ones(len(particles))
+
+        for i in range(len(particles)):
+            for j in range(len(scans)):
+                output[i] *= self.sensor_model_table[int(observation[j])][int(scans[i][j])]
+
+        return output
+
+
+
+
 
         ####################################
 
