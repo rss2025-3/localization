@@ -2,10 +2,13 @@ from localization.sensor_model import SensorModel
 from localization.motion_model import MotionModel
 
 from nav_msgs.msg import Odometry
+from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import PoseWithCovarianceStamped
 
 from rclpy.node import Node
 import rclpy
+
+import numpy as np
 
 assert rclpy
 
@@ -63,6 +66,11 @@ class ParticleFilter(Node):
         self.motion_model = MotionModel(self)
         self.sensor_model = SensorModel(self)
 
+        self.particles = None
+        self.declare_parameter("num_particles", "default")
+        self.num_particles = self.get_parameter('num_particles').get_parameter_value().string_value
+        self.initialize_particles
+
         self.get_logger().info("=============+READY+=============")
 
         # Implement the MCL algorithm
@@ -75,6 +83,59 @@ class ParticleFilter(Node):
         # Publish a transformation frame between the map
         # and the particle_filter_frame.
 
+def initialize_particles(self):
+    self.particles = np.random.uniform(-1, 1, (self.num_particles, 2))
+    self.particles = np.hstack([self.particles, np.random.uniform(-np.pi, np.pi, (self.num_particles, 1))])
+
+def laser_callback(self, msg):
+    probabilities = self.sensor_model.evaluate(self.particles, msg.ranges)
+    self.resample_particles(probabilities)
+
+    self.publish_pose()
+
+def odom_callback(self, msg):
+    x = msg.twist.twist.linear.x
+    y = msg.twist.twist.linear.y
+    theta = msg.twist.twist.angular.z
+
+    self.particles = self.motion_model.evaluate(self.particles,[x,y,theta])
+    self.resample_particles(probabilities)
+
+    self.publish_pose()
+
+def pose_callback(self, msg):
+    x = msg.pose.pose.position.x
+    y = msg.pose.pose.position.y
+    theta = 0
+
+    self.particles = np.random.uniform([x - 1, y - 1, theta - np.pi], [x + 1, y + 1, theta + np.pi], (self.num_particles, 3))
+    
+def resample_particles(self, probablities=None):
+    if probabilities is None:
+        probabilities = np.ones(self.num_particles) / self.num_particles
+
+    probabilities /= np.sum(probabilities)
+
+    index = np.random.choice(self.num_particles, size=self.num_particles, p=probabilities)
+    self.particles = self.particles[index]
+
+def publish_pose(self):
+    x_avg = np.mean(self.particles[:,0])
+    y_avg = np.mean(self.particles[:,1])
+    avg_theta_x = np.mean(np.cos(self.particles[:, 2]))
+    avg_theta_y = np.mean(np.sin(self.particles[:, 2]))
+    theta_avg = np.arctan2(avg_theta_y, avg_theta_x)
+
+    odom_msg = Odometry()
+    odom_msg.header.stamp = self.get_clock().now().to_msg()
+    odom_msg.header.frame_id = "/map"
+    odom_msg.child_frame_id = self.particle_filter_frame
+    odom_msg.pose.pose.position.x = x_avg
+    odom_msg.pose.pose.position.y = y_avg
+    odom_msg.pose.pose.orientation.z = np.sin(theta_avg / 2)
+    odom_msg.pose.pose.orientation.w = np.cos(theta_avg / 2)
+
+    self.odom_pub.publish(odom_msg)
 
 def main(args=None):
     rclpy.init(args=args)
