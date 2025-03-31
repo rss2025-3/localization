@@ -69,6 +69,7 @@ class ParticleFilter(Node):
         self.particles = None
         self.declare_parameter("num_particles", 200)
         self.num_particles = self.get_parameter('num_particles').get_parameter_value().integer_value
+        self.probabilities = np.ones(self.num_particles) / self.num_particles
         self.initialize_particles()
 
         self.get_logger().info("=============+READY+=============")
@@ -84,8 +85,8 @@ class ParticleFilter(Node):
         # and the particle_filter_frame.
 
     def laser_callback(self, msg):
-        probabilities = self.sensor_model.evaluate(self.particles, msg.ranges)
-        self.resample_particles(probabilities)
+        self.probabilities = self.sensor_model.evaluate(self.particles, msg.ranges)
+        self.resample_particles()
 
         self.publish_pose()
 
@@ -106,20 +107,15 @@ class ParticleFilter(Node):
 
         self.particles = np.random.uniform([x - 1, y - 1, theta - np.pi], [x + 1, y + 1, theta + np.pi], (self.num_particles, 3))
         
-    def resample_particles(self, probabilities=None):
-        if probabilities is None:
-            probabilities = np.ones(self.num_particles) / self.num_particles
-
-        probabilities /= np.sum(probabilities)
-
-        index = np.random.choice(self.num_particles, size=self.num_particles, p=probabilities)
+    def resample_particles(self):
+        index = np.random.choice(self.num_particles, size=self.num_particles, p=self.probabilities)
         self.particles = self.particles[index]
 
     def publish_pose(self):
-        x_avg = np.mean(self.particles[:,0])
-        y_avg = np.mean(self.particles[:,1])
-        avg_theta_x = np.mean(np.cos(self.particles[:, 2]))
-        avg_theta_y = np.mean(np.sin(self.particles[:, 2]))
+        x_avg = np.average(self.particles[:,0], weights=self.probabilities)
+        y_avg = np.average(self.particles[:,1], weights=self.probabilities)
+        avg_theta_x = np.average(np.cos(self.particles[:, 2]), weights=self.probabilities)
+        avg_theta_y = np.average(np.sin(self.particles[:, 2]), weights=self.probabilities)
         theta_avg = np.arctan2(avg_theta_y, avg_theta_x)
 
         odom_msg = Odometry()
