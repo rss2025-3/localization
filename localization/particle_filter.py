@@ -3,7 +3,8 @@ from localization.motion_model import MotionModel
 
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped, Quaternion
+import tf_transformations as tf
 
 from rclpy.node import Node
 import rclpy
@@ -66,6 +67,7 @@ class ParticleFilter(Node):
         self.motion_model = MotionModel(self)
         self.sensor_model = SensorModel(self)
 
+        self.cur_time = self.get_clock().now()
         self.particles = None
         self.declare_parameter("num_particles", 200)
         self.num_particles = self.get_parameter('num_particles').get_parameter_value().integer_value
@@ -85,31 +87,47 @@ class ParticleFilter(Node):
         # and the particle_filter_frame.
 
     def laser_callback(self, msg):
-        self.probabilities = self.sensor_model.evaluate(self.particles, msg.ranges)
-        self.resample_particles()
+        if len(self.particles)==0:#no particles
+            return
+        
+        full_range = np.array(msg.ranges)
+        if len(full_range) == 0:
+            return
+        mask = (np.linspace(0, len(full_range)-1, self.sensor_model.num_beams_per_particle)).astype(int)
+        actual_range = full_range[mask]
+        
+        self.probabilities = self.sensor_model.evaluate(self.particles, actual_range)
+        
+        index = np.random.choice(self.num_particles, self.num_particles, True, self.probabilities)
+        self.particles = self.particles[index]
 
         self.publish_pose()
 
     def odom_callback(self, msg):
+        if len(self.particles)==0:
+            return
+
+        dt = (self.get_clock().now() - self.cur_time).nanoseconds * 1e-9
+        self.cur_time = self.get_clock().now()
         x = msg.twist.twist.linear.x
+        dx = -x*dt
         y = msg.twist.twist.linear.y
+        dy = -y*dt
         theta = msg.twist.twist.angular.z
+        dtheta = -theta*dt
 
-        self.particles = self.motion_model.evaluate(self.particles,[x,y,theta])
-        self.resample_particles()
-
+        self.particles = self.motion_model.evaluate(self.particles,[dx,dy,dtheta])
         self.publish_pose()
 
     def pose_callback(self, msg):
         x = msg.pose.pose.position.x
         y = msg.pose.pose.position.y
-        theta = 0
-
-        self.particles = np.random.uniform([x - 1, y - 1, theta - np.pi], [x + 1, y + 1, theta + np.pi], (self.num_particles, 3))
+        theta = euler_from_quaternion((msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w))[2]
         
-    def resample_particles(self):
-        index = np.random.choice(self.num_particles, size=self.num_particles, p=self.probabilities)
-        self.particles = self.particles[index]
+        noise = np.random.normal(np.zeros(3), np.eye(3), self.num_particles)
+
+        self.particles = np.array([x,y,theta])+noise #np.random.uniform([x - 1, y - 1, theta - np.pi], [x + 1, y + 1, theta + np.pi], (self.num_particles, 3))
+        self.publish_pose()
 
     def publish_pose(self):
         x_avg = np.average(self.particles[:,0], weights=self.probabilities)
@@ -121,11 +139,14 @@ class ParticleFilter(Node):
         odom_msg = Odometry()
         odom_msg.header.stamp = self.get_clock().now().to_msg()
         odom_msg.header.frame_id = "/map"
-        odom_msg.child_frame_id = self.particle_filter_frame
+        # odom_msg.child_frame_id = self.particle_filter_frame
         odom_msg.pose.pose.position.x = x_avg
         odom_msg.pose.pose.position.y = y_avg
-        odom_msg.pose.pose.orientation.z = np.sin(theta_avg / 2)
-        odom_msg.pose.pose.orientation.w = np.cos(theta_avg / 2)
+        odom_msg.pose.pose.position.z = 0.0
+        quaternion = tf.quaternion_from_euler(0,0,theta_avg)
+        odom_msg.pose.pose.orientation = Quaternion(x=quaternion[0], y=quaternion[1], z=quaternion[2], w=quaternion[3])
+        # odom_msg.pose.pose.orientation.z = np.sin(theta_avg / 2)
+        # odom_msg.pose.pose.orientation.w = np.cos(theta_avg / 2)
 
         self.odom_pub.publish(odom_msg)
 

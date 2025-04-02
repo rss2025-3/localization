@@ -1,0 +1,50 @@
+[0.887s] Invoking command in '/home/racecar/racecar_ws/src/localization/build/localization': PYTHONPATH=/home/racecar/racecar_ws/src/localization/build/localization/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/racecar/racecar_ws/src/localization/install/localization/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/racecar/racecar_ws/src/localization/build/localization/build --no-deps symlink_data
+[1.266s] /usr/lib/python3/dist-packages/setuptools/dist.py:723: UserWarning: Usage of dash-separated 'script-dir' will not be supported in future versions. Please use the underscore name 'script_dir' instead
+[1.266s]   warnings.warn(
+[1.272s] [39mrunning develop[0m
+[1.312s] [39mrunning egg_info[0m
+[1.312s] [39mcreating localization.egg-info[0m
+[1.313s] [39mwriting localization.egg-info/PKG-INFO[0m
+[1.314s] [39mwriting dependency_links to localization.egg-info/dependency_links.txt[0m
+[1.315s] [39mwriting entry points to localization.egg-info/entry_points.txt[0m
+[1.316s] [39mwriting requirements to localization.egg-info/requires.txt[0m
+[1.316s] [39mwriting top-level names to localization.egg-info/top_level.txt[0m
+[1.317s] [39mwriting manifest file 'localization.egg-info/SOURCES.txt'[0m
+[1.321s] [39mreading manifest file 'localization.egg-info/SOURCES.txt'[0m
+[1.322s] [39mwriting manifest file 'localization.egg-info/SOURCES.txt'[0m
+[1.323s] [39mrunning build_ext[0m
+[1.323s] [39mbuilding 'scan_simulator_2d' extension[0m
+[1.324s] [39mC compiler: aarch64-linux-gnu-gcc -Wno-unused-result -Wsign-compare -DNDEBUG -g -fwrapv -O2 -Wall -g -fstack-protector-strong -Wformat -Werror=format-security -g -fwrapv -O2 -g -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC
+[1.324s] [0m
+[1.324s] [39mcreating build[0m
+[1.324s] [39mcreating build/temp.linux-aarch64-3.10[0m
+[1.325s] [39mcreating build/temp.linux-aarch64-3.10/localization[0m
+[1.325s] [39mcompile options: '-I/home/sim_ws/install/racecar_simulator/include -I/home/racecar/racecar_ws/src/localization/install/localization/include -I/usr/include/python3.10 -c'
+[1.325s] extra options: '-Wno-cpp -g -Wno-maybe-uninitialized'[0m
+[1.325s] [39maarch64-linux-gnu-gcc: localization/scan_simulator_2d.cpp[0m
+[1.965s] [39mcreating build/lib.linux-aarch64-3.10[0m
+[1.965s] [39maarch64-linux-gnu-g++ -shared -Wl,-O1 -Wl,-Bsymbolic-functions -Wl,-Bsymbolic-functions -g -fwrapv -O2 -Wl,-Bsymbolic-functions -g -fwrapv -O2 -g -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 build/temp.linux-aarch64-3.10/localization/scan_simulator_2d.o -L/home/sim_ws/install/racecar_simulator/lib -lracecar_simulator -o build/lib.linux-aarch64-3.10/scan_simulator_2d.cpython-310-aarch64-linux-gnu.so[0m
+[1.995s] [39mcopying build/lib.linux-aarch64-3.10/scan_simulator_2d.cpython-310-aarch64-linux-gnu.so -> [0m
+[1.997s] [39mCreating /home/racecar/racecar_ws/src/localization/install/localization/lib/python3.10/site-packages/localization.egg-link (link to .)[0m
+[1.998s] [39mInstalling motion_model_test script to /home/racecar/racecar_ws/src/localization/install/localization/lib/localization[0m
+[1.999s] [39mInstalling particle_filter script to /home/racecar/racecar_ws/src/localization/install/localization/lib/localization[0m
+[1.999s] [39mInstalling sensor_model_test script to /home/racecar/racecar_ws/src/localization/install/localization/lib/localization[0m
+[2.000s] [39m
+[2.001s] Installed /home/racecar/racecar_ws/src/localization/build/localization[0m
+[2.001s] [39mrunning symlink_data[0m
+[2.001s] [39mcreating /home/racecar/racecar_ws/src/localization/install/localization/share/ament_index[0m
+[2.001s] [39mcreating /home/racecar/racecar_ws/src/localization/install/localization/share/ament_index/resource_index[0m
+[2.001s] [39mcreating /home/racecar/racecar_ws/src/localization/install/localization/share/ament_index/resource_index/packages[0m
+[2.001s] [39msymbolically linking /home/racecar/racecar_ws/src/localization/build/localization/resource/localization -> /home/racecar/racecar_ws/src/localization/install/localization/share/ament_index/resource_index/packages[0m
+[2.002s] [39msymbolically linking /home/racecar/racecar_ws/src/localization/build/localization/package.xml -> /home/racecar/racecar_ws/src/localization/install/localization/share/localization[0m
+[2.002s] [39msymbolically linking /home/racecar/racecar_ws/src/localization/build/localization/localization/params.yaml -> /home/racecar/racecar_ws/src/localization/install/localization/share/localization[0m
+[2.002s] [39msymbolically linking /home/racecar/racecar_ws/src/localization/build/localization/localization/test/test_params.yaml -> /home/racecar/racecar_ws/src/localization/install/localization/share/localization[0m
+[2.003s] [39mcreating /home/racecar/racecar_ws/src/localization/install/localization/share/localization/launch[0m
+[2.003s] [39msymbolically linking /home/racecar/racecar_ws/src/localization/build/localization/launch/localize.launch.xml -> /home/racecar/racecar_ws/src/localization/install/localization/share/localization/launch[0m
+[2.003s] [39msymbolically linking /home/racecar/racecar_ws/src/localization/build/localization/launch/unit_tests/sensor_model_test.launch.py -> /home/racecar/racecar_ws/src/localization/install/localization/share/localization/launch[0m
+[2.003s] [39msymbolically linking /home/racecar/racecar_ws/src/localization/build/localization/launch/unit_tests/motion_model_test.launch.py -> /home/racecar/racecar_ws/src/localization/install/localization/share/localization/launch[0m
+[2.004s] [39msymbolically linking /home/racecar/racecar_ws/src/localization/build/localization/launch/unit_tests/test_map.launch.xml -> /home/racecar/racecar_ws/src/localization/install/localization/share/localization/launch[0m
+[2.004s] [39mcreating /home/racecar/racecar_ws/src/localization/install/localization/share/localization/test_map[0m
+[2.004s] [39msymbolically linking /home/racecar/racecar_ws/src/localization/build/localization/test_map/test_map.yaml -> /home/racecar/racecar_ws/src/localization/install/localization/share/localization/test_map[0m
+[2.005s] [39msymbolically linking /home/racecar/racecar_ws/src/localization/build/localization/test_map/test_map.png -> /home/racecar/racecar_ws/src/localization/install/localization/share/localization/test_map[0m
+[2.094s] Invoked command in '/home/racecar/racecar_ws/src/localization/build/localization' returned '0': PYTHONPATH=/home/racecar/racecar_ws/src/localization/build/localization/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/racecar/racecar_ws/src/localization/install/localization/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py develop --editable --build-directory /home/racecar/racecar_ws/src/localization/build/localization/build --no-deps symlink_data
