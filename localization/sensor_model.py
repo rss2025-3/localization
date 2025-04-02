@@ -8,6 +8,7 @@ from tf_transformations import euler_from_quaternion
 from nav_msgs.msg import OccupancyGrid
 
 import sys
+from tqdm import trange
 
 np.set_printoptions(threshold=sys.maxsize)
 
@@ -124,7 +125,7 @@ class SensorModel:
 
         z_max = self.table_width - 1
 
-        for d_px in range(self.table_width):
+        for d_px in trange(self.table_width):
             for zk_px in range(self.table_width):
                 self.sensor_model_table[zk_px][d_px] = p_total(zk_px, d_px, z_max)
         
@@ -164,18 +165,20 @@ class SensorModel:
         # to perform ray tracing from all the particles.
         # This produces a matrix of size N x num_beams_per_particle 
 
+        
         scans = self.scan_sim.scan(particles)
         scans = scans / (self.resolution * self.lidar_scale_to_map_scale)
         scans = np.clip(scans, 0, self.table_width-1)
-
+        #return#print("in between")
         # observation = observation[::len(observation) // len(scans)]
         observation = np.array(observation)
         observation = observation / (self.resolution * self.lidar_scale_to_map_scale)
         observation = np.clip(observation, 0, self.table_width-1).astype(int)
 
         output = np.ones(len(particles))
+        
         # return output
-
+        print("before for loop")
         for i in range(len(particles)):
             for j in range(len(observation)):
                 output[i] *= self.sensor_model_table[int(observation[j])][int(scans[i][j])]
@@ -206,7 +209,7 @@ class SensorModel:
             origin_o.z,
             origin_o.w))
         origin = (origin_p.x, origin_p.y, origin_o[2])
-
+        
         # Initialize a map with the laser scan
         self.scan_sim.set_map(
             self.map,

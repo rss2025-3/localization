@@ -35,7 +35,8 @@ class ParticleFilter(Node):
 
         scan_topic = self.get_parameter("scan_topic").get_parameter_value().string_value
         odom_topic = self.get_parameter("odom_topic").get_parameter_value().string_value
-
+        odom_topic = "/vesc/odom"
+        self.get_logger().info(f"{odom_topic}")
         self.laser_sub = self.create_subscription(LaserScan, scan_topic,
                                                   self.laser_callback,
                                                   1)
@@ -64,14 +65,17 @@ class ParticleFilter(Node):
         self.odom_pub = self.create_publisher(Odometry, "/pf/pose/odom", 1)
 
         # Initialize the models
+        self.get_logger().info("before init models")
         self.motion_model = MotionModel(self)
         self.sensor_model = SensorModel(self)
+        self.get_logger().info("after init models")
 
         self.cur_time = self.get_clock().now()
         self.particles = None
         self.declare_parameter("num_particles", 200)
         self.num_particles = self.get_parameter('num_particles').get_parameter_value().integer_value
         self.probabilities = np.ones(self.num_particles) / self.num_particles
+        self.get_logger().info("before init particles")
         self.initialize_particles()
 
         self.get_logger().info("=============+READY+=============")
@@ -87,16 +91,23 @@ class ParticleFilter(Node):
         # and the particle_filter_frame.
 
     def laser_callback(self, msg):
+        self.get_logger().info("laser callback1")
         if len(self.particles)==0:#no particles
             return
-        
+        self.get_logger().info("laser callback2")
+
         full_range = np.array(msg.ranges)
         if len(full_range) == 0:
             return
-        mask = (np.linspace(0, len(full_range)-1, self.sensor_model.num_beams_per_particle)).astype(int)
+        mask = (np.linspace(0, len(full_range)-1, 99)).astype(int)#self.sensor_model.num_beams_per_particle)).astype(int)
         actual_range = full_range[mask]
-        
+        self.get_logger().info(f"{mask}")
+
         self.probabilities = self.sensor_model.evaluate(self.particles, actual_range)
+        self.get_logger().info("after evaluate")
+        if self.probabilities is None:
+            self.get_logger().info("no probabilities")
+            return
         self.probabilities/=sum(self.probabilities)
         
         index = np.random.choice(self.num_particles, self.num_particles, True, self.probabilities)
@@ -105,8 +116,11 @@ class ParticleFilter(Node):
         self.publish_pose()
 
     def odom_callback(self, msg):
+        #self.get_logger().info("odom callback")
         if len(self.particles)==0:
             return
+        
+        self.get_logger().info("odom callback")
 
         dt = (self.get_clock().now() - self.cur_time).nanoseconds * 1e-9
         self.cur_time = self.get_clock().now()
@@ -121,6 +135,7 @@ class ParticleFilter(Node):
         self.publish_pose()
 
     def pose_callback(self, msg):
+        self.get_logger().info("pose callback")
         x = msg.pose.pose.position.x
         y = msg.pose.pose.position.y
         theta = tf.euler_from_quaternion((msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w))[2]

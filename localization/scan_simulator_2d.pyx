@@ -85,9 +85,7 @@ cdef class PyScanSimulator2D:
         # Allocate the for loops
         cdef Pose2D p
         
-        
         for i in range(poses.shape[0]):
             p = Pose2D(poses[i,0], poses[i,1], poses[i,2])
             self.thisptr.scan(p, &scans[i,0])
-
         return scans
