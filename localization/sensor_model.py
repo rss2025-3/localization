@@ -166,17 +166,17 @@ class SensorModel:
 
         scans = self.scan_sim.scan(particles)
         scans = scans / (self.resolution * self.lidar_scale_to_map_scale)
-        scans = np.clip(scans, 0, self.table_width)
+        scans = np.clip(scans, 0, self.table_width-1)
 
         # observation = observation[::len(observation) // len(scans)]
-        # observation = np.array(observation)
+        observation = np.array(observation)
         observation = observation / (self.resolution * self.lidar_scale_to_map_scale)
-        observation = np.round(np.clip(observation, 0, self.table_width-2)).astype(int)
+        observation = np.clip(observation, 0, self.table_width-1).astype(int)
 
         output = np.ones(len(particles))
 
         for i in range(len(particles)):
-            for j in range(len(scans)):
+            for j in range(len(observation)):
                 output[i] *= self.sensor_model_table[int(observation[j])][int(scans[i][j])]
 
         return output

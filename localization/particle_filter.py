@@ -97,6 +97,7 @@ class ParticleFilter(Node):
         actual_range = full_range[mask]
         
         self.probabilities = self.sensor_model.evaluate(self.particles, actual_range)
+        self.probabilities/=sum(self.probabilities)
         
         index = np.random.choice(self.num_particles, self.num_particles, True, self.probabilities)
         self.particles = self.particles[index]
@@ -122,9 +123,9 @@ class ParticleFilter(Node):
     def pose_callback(self, msg):
         x = msg.pose.pose.position.x
         y = msg.pose.pose.position.y
-        theta = euler_from_quaternion((msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w))[2]
+        theta = tf.euler_from_quaternion((msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w))[2]
         
-        noise = np.random.normal(np.zeros(3), np.eye(3), self.num_particles)
+        noise = np.random.multivariate_normal(np.zeros(3), np.eye(3), self.num_particles)
 
         self.particles = np.array([x,y,theta])+noise #np.random.uniform([x - 1, y - 1, theta - np.pi], [x + 1, y + 1, theta + np.pi], (self.num_particles, 3))
         self.publish_pose()
