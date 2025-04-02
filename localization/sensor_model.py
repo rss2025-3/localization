@@ -174,12 +174,15 @@ class SensorModel:
         observation = np.clip(observation, 0, self.table_width-1).astype(int)
 
         output = np.ones(len(particles))
+        # return output
 
         for i in range(len(particles)):
             for j in range(len(observation)):
                 output[i] *= self.sensor_model_table[int(observation[j])][int(scans[i][j])]
 
         return output
+    
+        # return 
 
 
 

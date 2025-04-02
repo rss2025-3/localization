@@ -48,7 +48,7 @@ class MotionModel:
         sin_theta = np.sin(particles[:, 2])
 
         # Update the particles with noise using vectorized operations
-        x_new = particles[:, 0] + (dx + noise_dx) * cos_theta - (dy + noise_dy) * sin_theta
+        x_new = particles[:, 0] - (dx + noise_dx) * cos_theta + (dy + noise_dy) * sin_theta
         y_new = particles[:, 1] + (dx + noise_dx) * sin_theta + (dy + noise_dy) * cos_theta
         theta_new = particles[:, 2] + (dtheta + noise_dtheta)
 
