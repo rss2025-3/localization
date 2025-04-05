@@ -203,26 +203,35 @@ class ParticleFilter(Node):
         stata = self.sensor_model.map
         
         if stata is not None:
-            width = self.sensor_model.map_width
-            height = self.sensor_model.map_height
-
-            stata.reshape((height, width))
-
-            self.get_logger().info(f"{stata.shape}")
-
-            free_space = np.where(stata < 0.5)           
+            # Get map dimensions and info
+            width = stata.info.width
+            height = stata.info.height
+            resolution = stata.info.resolution
+            origin_x = stata.info.origin.position.x
+            origin_y = stata.info.origin.position.y
+            
+            # Reshape map data into 2D array
+            map_data = np.array(stata.data).reshape((height, width))
+            
+            # Find free space coordinates (probability > 0)
+            free_space = np.where((map_data < 50) & (map_data >= 0))  
             free_y, free_x = free_space
             
+            # Convert to world coordinates
+            world_x = free_x * resolution + origin_x
+            world_y = free_y * resolution + origin_y
+            
             # Randomly sample from free space
-            indices = np.random.choice(len(free_x), self.num_particles)
-            x_samples = free_x[indices]
-            y_samples = free_y[indices]
+            indices = np.random.choice(len(world_x), self.num_particles)
+            x_samples = world_x[indices]
+            y_samples = world_y[indices]
             
             # Generate random orientations
             theta_samples = np.random.uniform(-np.pi, np.pi, self.num_particles)
             
             # Combine into particle array
             self.particles = np.column_stack((x_samples, y_samples, theta_samples))
+
         else:
             raise Exception("Map not available")
 
