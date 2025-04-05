@@ -201,9 +201,16 @@ class ParticleFilter(Node):
 
     def initialize_particles(self):
         stata = self.sensor_model.map
-
+        
         if stata is not None:
-            free_space = np.where((stata < 0.5) and (stata > 0.0))
+            width = self.sensor_model.map_width
+            height = self.sensor_model.map_height
+
+            stata.reshape((height, width))
+
+            self.get_logger().info(f"{stata.shape}")
+
+            free_space = np.where(stata < 0.5)           
             free_y, free_x = free_space
             
             # Randomly sample from free space

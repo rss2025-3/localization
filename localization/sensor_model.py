@@ -200,6 +200,9 @@ class SensorModel:
         self.map = np.array(map_msg.data, np.double) / 100.
         self.map = np.clip(self.map, 0, 1)
 
+        self.map_height = map_msg.info.height
+        self.map_width = map_msg.info.width
+
         self.resolution = map_msg.info.resolution
 
         # Convert the origin to a tuple
