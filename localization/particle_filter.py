@@ -1,9 +1,11 @@
 from localization.sensor_model import SensorModel
 from localization.motion_model import MotionModel
+from geometry_msgs.msg import PoseArray, Pose
 
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import PoseWithCovarianceStamped, Quaternion, Pose
+from nav2_msgs.msg import Particle, ParticleCloud
 import tf_transformations as tf
 
 from rclpy.node import Node
@@ -63,7 +65,7 @@ class ParticleFilter(Node):
         #     "/map" frame.
 
         self.odom_pub = self.create_publisher(Odometry, "/pf/pose/odom", 1)
-        #self.particle_pub = self.create_publisher(ParticleCloud
+        self.particle_pub = self.create_publisher(ParticleCloud, "/particlecloud", 1)
 
         # Initialize the models
         self.get_logger().info("before init models")
@@ -169,6 +171,23 @@ class ParticleFilter(Node):
         # odom_msg.pose.pose.orientation.w = np.cos(theta_avg / 2)
 
         self.odom_pub.publish(odom_msg)
+
+        # Publish particle cloud
+        particle_msg = ParticleCloud()
+        particle_msg.header.stamp = self.get_clock().now().to_msg()
+        particle_msg.header.frame_id = "/map"
+        
+        for i, particle in enumerate(self.particles):
+            p = Particle()
+            p.pose.position.x = particle[0]
+            p.pose.position.y = particle[1]
+            quaternion = tf.quaternion_from_euler(0, 0, particle[2])
+            p.pose.orientation = Quaternion(x=quaternion[0], y=quaternion[1], 
+                                         z=quaternion[2], w=quaternion[3])
+            p.weight = float(self.probabilities[i])
+            particle_msg.particles.append(p)
+        
+        self.particle_pub.publish(particle_msg)
 
     def initialize_particles(self):
         self.particles = np.random.uniform(-1, 1, (self.num_particles, 2))
