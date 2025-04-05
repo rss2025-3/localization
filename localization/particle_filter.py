@@ -39,23 +39,12 @@ class ParticleFilter(Node):
         odom_topic = self.get_parameter("odom_topic").get_parameter_value().string_value
         odom_topic = "/vesc/odom"
         self.get_logger().info(f"{odom_topic}")
-        self.laser_sub = self.create_subscription(LaserScan, scan_topic,
-                                                  self.laser_callback,
-                                                  1)
-
-        self.odom_sub = self.create_subscription(Odometry, odom_topic,
-                                                 self.odom_callback,
-                                                 1)
 
         #  *Important Note #2:* You must respond to pose
         #     initialization requests sent to the /initialpose
         #     topic. You can test that this works properly using the
         #     "Pose Estimate" feature in RViz, which publishes to
         #     /initialpose.
-
-        self.pose_sub = self.create_subscription(PoseWithCovarianceStamped, "/initialpose",
-                                                 self.pose_callback,
-                                                 1)
 
         #  *Important Note #3:* You must publish your pose estimate to
         #     the following topic. In particular, you must use the
@@ -73,17 +62,29 @@ class ParticleFilter(Node):
         self.sensor_model = SensorModel(self)
         self.get_logger().info("after init models")
 
+        # Wait for map to be received before continuing
+        while self.sensor_model.map is None:
+            self.get_logger().info("Waiting for map...")
+            rclpy.spin_once(self, timeout_sec=1.0)
+
+        self.laser_sub = self.create_subscription(LaserScan, scan_topic,
+                                                  self.laser_callback,
+                                                  1)
+
+        self.pose_sub = self.create_subscription(PoseWithCovarianceStamped, "/initialpose",
+                                                 self.pose_callback,
+                                                 1)
+
+        self.odom_sub = self.create_subscription(Odometry, odom_topic,
+                                                 self.odom_callback,
+                                                 1)
+
         self.cur_time = self.get_clock().now()
         self.particles = None
         self.declare_parameter("num_particles", 200)
         self.num_particles = self.get_parameter('num_particles').get_parameter_value().integer_value
         self.probabilities = np.ones(self.num_particles) / self.num_particles
         self.get_logger().info("before init particles")
-
-        # Wait for map to be received before continuing
-        while self.sensor_model.map is None:
-            self.get_logger().info("Waiting for map...")
-            rclpy.spin_once(self, timeout_sec=1.0)
 
         self.initialize_particles()
 
@@ -200,6 +201,7 @@ class ParticleFilter(Node):
 
     def initialize_particles(self):
         stata = self.sensor_model.map
+
         if stata is not None:
             # Get map dimensions and info
             width = stata.info.width
