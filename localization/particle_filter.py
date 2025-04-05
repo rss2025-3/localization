@@ -184,7 +184,10 @@ class ParticleFilter(Node):
             quaternion = tf.quaternion_from_euler(0, 0, particle[2])
             p.pose.orientation = Quaternion(x=quaternion[0], y=quaternion[1], 
                                          z=quaternion[2], w=quaternion[3])
-            p.weight = float(self.probabilities[i])
+            if self.probabilities is None:
+                p.weight = float(1/len(self.particles))
+            else:
+                p.weight = float(self.probabilities[i])
             particle_msg.particles.append(p)
         
         self.particle_pub.publish(particle_msg)
