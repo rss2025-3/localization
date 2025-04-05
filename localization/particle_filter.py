@@ -79,6 +79,12 @@ class ParticleFilter(Node):
         self.num_particles = self.get_parameter('num_particles').get_parameter_value().integer_value
         self.probabilities = np.ones(self.num_particles) / self.num_particles
         self.get_logger().info("before init particles")
+
+        # Wait for map to be received before continuing
+        while self.sensor_model.map is None:
+            self.get_logger().info("Waiting for map...")
+            rclpy.spin_once(self, timeout_sec=1.0)
+
         self.initialize_particles()
 
         self.get_logger().info("=============+READY+=============")
@@ -193,8 +199,41 @@ class ParticleFilter(Node):
         self.particle_pub.publish(particle_msg)
 
     def initialize_particles(self):
-        self.particles = np.random.uniform(-1, 1, (self.num_particles, 2))
-        self.particles = np.hstack([self.particles, np.random.uniform(-3/2*np.pi, 3/2*np.pi, (self.num_particles, 1))])
+        stata = self.sensor_model.map
+        if stata is not None:
+            # Get map dimensions and info
+            width = stata.info.width
+            height = stata.info.height
+            resolution = stata.info.resolution
+            origin_x = stata.info.origin.position.x
+            origin_y = stata.info.origin.position.y
+            
+            # Reshape map data into 2D array
+            map_data = np.array(stata.data).reshape((height, width))
+            
+            # Find free space coordinates (probability > 0)
+            free_space = np.where((map_data < 50) and (map_data >= 0))  # Typically occupancy < 50 means free space
+            free_y, free_x = free_space
+            
+            # Convert to world coordinates
+            world_x = free_x * resolution + origin_x
+            world_y = free_y * resolution + origin_y
+            
+            # Randomly sample from free space
+            indices = np.random.choice(len(world_x), self.num_particles)
+            x_samples = world_x[indices]
+            y_samples = world_y[indices]
+            
+            # Generate random orientations
+            theta_samples = np.random.uniform(-np.pi, np.pi, self.num_particles)
+            
+            # Combine into particle array
+            self.particles = np.column_stack((x_samples, y_samples, theta_samples))
+        else:
+            raise Exception("Bad")
+            # # Fallback to original random initialization if no map available
+            # self.particles = np.random.uniform(-1, 1, (self.num_particles, 2))
+            # self.particles = np.hstack([self.particles, np.random.uniform(-3/2*np.pi, 3/2*np.pi, (self.num_particles, 1))])
 
 def main(args=None):
     rclpy.init(args=args)
