@@ -113,7 +113,9 @@ class ParticleFilter(Node):
         actual_range = full_range[mask]
         #self.get_logger().info(f"{mask}")
 
-        self.probabilities = self.sensor_model.evaluate(self.particles, actual_range)
+        #self.probabilities = self.sensor_model.evaluate(self.particles, actual_range)
+        self.probabilities = None
+
         #self.get_logger().info("after evaluate")
         if self.probabilities is None:
             self.get_logger().info("no probabilities")
@@ -192,7 +194,7 @@ class ParticleFilter(Node):
             p.pose.orientation = Quaternion(x=quaternion[0], y=quaternion[1], 
                                          z=quaternion[2], w=quaternion[3])
             if self.probabilities is None:
-                p.weight = float(1/len(self.particles))
+                p.weight = float(5/len(self.particles))
             else:
                 p.weight = float(self.probabilities[i])
             particle_msg.particles.append(p)
@@ -200,7 +202,7 @@ class ParticleFilter(Node):
         self.particle_pub.publish(particle_msg)
 
     def initialize_particles(self):
-        stata = self.sensor_model.map
+        stata = self.sensor_model.occupancy_map
         
         if stata is not None:
             # Get map dimensions and info
@@ -215,12 +217,13 @@ class ParticleFilter(Node):
             
             # Find free space coordinates (probability > 0)
             free_space = np.where((map_data < 50) & (map_data >= 0))  
+
             free_y, free_x = free_space
             
             # Convert to world coordinates
-            world_x = free_x * resolution + origin_x
-            world_y = free_y * resolution + origin_y
-            
+            world_x = free_x * resolution - origin_x
+            world_y = free_y * resolution - origin_y
+
             # Randomly sample from free space
             indices = np.random.choice(len(world_x), self.num_particles)
             x_samples = world_x[indices]
@@ -231,6 +234,7 @@ class ParticleFilter(Node):
             
             # Combine into particle array
             self.particles = np.column_stack((x_samples, y_samples, theta_samples))
+            self.get_logger().info(f"{self.particles}")
 
         else:
             raise Exception("Map not available")
