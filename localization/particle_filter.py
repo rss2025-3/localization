@@ -1,6 +1,6 @@
 from localization.sensor_model import SensorModel
 from localization.motion_model import MotionModel
-from geometry_msgs.msg import PoseArray, Pose
+from geometry_msgs.msg import PoseArray, Pose, PoseStamped
 
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
@@ -66,6 +66,11 @@ class ParticleFilter(Node):
         while self.sensor_model.map is None:
             self.get_logger().info("Waiting for map...")
             rclpy.spin_once(self, timeout_sec=1.0)
+        
+        self.clicked_sub = self.create_subscription(PoseStamped,
+                                                    "/clicked_point",
+                                                    self.initialize_particles,
+                                                    1)
 
         self.laser_sub = self.create_subscription(LaserScan, scan_topic,
                                                   self.laser_callback,
@@ -201,56 +206,67 @@ class ParticleFilter(Node):
         
         self.particle_pub.publish(particle_msg)
 
-    def initialize_particles(self):
+    def initialize_particles(self, message):
         stata = self.sensor_model.occupancy_map
         
         if stata is not None:
-            # Get map dimensions and info
-            width = stata.info.width
-            height = stata.info.height
+            # Get clicked point in world coordinates
+            clicked_x = message.pose.position.x
+            clicked_y = message.pose.position.y
+            
+            # Get map info
             resolution = stata.info.resolution
             origin_x = stata.info.origin.position.x
             origin_y = stata.info.origin.position.y
             
-            # Reshape map data into 2D array
-            map_data = np.array(stata.data).reshape((height, width))
-            
-            # Find free space coordinates (probability > 0)
-            free_space = np.where((map_data < 50) & (map_data >= 0))  
-
-            free_y, free_x = free_space
-            
-            # Convert to world coordinates
-            # First create rotation matrix from origin orientation
+            # Create rotation matrix from origin orientation
             origin_theta = tf.euler_from_quaternion((
                 stata.info.origin.orientation.x,
                 stata.info.origin.orientation.y,
                 stata.info.origin.orientation.z,
                 stata.info.origin.orientation.w))[2]
             
-            rotation_matrix = np.array([
-                [np.cos(origin_theta), -np.sin(origin_theta)],
-                [np.sin(origin_theta), np.cos(origin_theta)]
+            # Create inverse rotation matrix to go from world to map coordinates
+            inv_rotation_matrix = np.array([
+                [np.cos(-origin_theta), -np.sin(-origin_theta)],
+                [np.sin(-origin_theta), np.cos(-origin_theta)]
             ])
             
-            # Apply rotation and translation
-            coords = np.vstack((free_x * resolution, free_y * resolution))
-            rotated_coords = np.dot(rotation_matrix, coords)
+            # Convert clicked point to map coordinates
+            clicked_world = np.array([[clicked_x - origin_x], [clicked_y - origin_y]])
+            clicked_map = np.dot(inv_rotation_matrix, clicked_world)
+            map_x = int((clicked_map[0] / resolution)[0])
+            map_y = int((clicked_map[1] / resolution)[0])
+            
+            # Sample points from Gaussian distribution around clicked point
+            std_dev_meters = 1.0  # 1 meter standard deviation
+            std_dev_cells = int(std_dev_meters / resolution)
+            
+            x_samples = np.random.normal(map_x, std_dev_cells, self.num_particles)
+            y_samples = np.random.normal(map_y, std_dev_cells, self.num_particles)
+            
+            # Clip to ensure points are within map bounds
+            x_samples = np.clip(x_samples, 0, stata.info.width - 1)
+            y_samples = np.clip(y_samples, 0, stata.info.height - 1)
+            
+            # Convert back to world coordinates
+            coords = np.vstack((x_samples * resolution, y_samples * resolution))
+            rotated_coords = np.dot(np.array([
+                [np.cos(origin_theta), -np.sin(origin_theta)],
+                [np.sin(origin_theta), np.cos(origin_theta)]
+            ]), coords)
+            
             world_x = rotated_coords[0] + origin_x
             world_y = rotated_coords[1] + origin_y
-            
-            # Randomly sample from free space
-            indices = np.random.choice(len(world_x), self.num_particles)
-            x_samples = world_x[indices]
-            y_samples = world_y[indices]
             
             # Generate random orientations
             theta_samples = np.random.uniform(-np.pi, np.pi, self.num_particles)
             
             # Combine into particle array
-            self.particles = np.column_stack((x_samples, y_samples, theta_samples))
-            self.get_logger().info(f"{self.particles}")
-
+            self.particles = np.column_stack((world_x, world_y, theta_samples))
+            self.probabilities = np.ones(self.num_particles) / self.num_particles
+            
+            self.get_logger().info(f"Initialized particles around clicked point ({clicked_x}, {clicked_y})")
         else:
             raise Exception("Map not available")
 
