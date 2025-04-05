@@ -8,7 +8,7 @@ from tf_transformations import euler_from_quaternion
 from nav_msgs.msg import OccupancyGrid
 
 import sys
-from tqdm import trange
+#from tqdm import trange
 
 np.set_printoptions(threshold=sys.maxsize)
 
@@ -23,13 +23,13 @@ class SensorModel:
         node.declare_parameter('lidar_scale_to_map_scale', 1.0)
 
         self.map_topic = node.get_parameter('map_topic').get_parameter_value().string_value
+        #self.map_topic = '/map'
         self.num_beams_per_particle = node.get_parameter('num_beams_per_particle').get_parameter_value().integer_value
         self.scan_theta_discretization = node.get_parameter(
             'scan_theta_discretization').get_parameter_value().double_value
         self.scan_field_of_view = node.get_parameter('scan_field_of_view').get_parameter_value().double_value
         self.lidar_scale_to_map_scale = node.get_parameter(
             'lidar_scale_to_map_scale').get_parameter_value().double_value
-
         ####################################
         # Adjust these parameters
         self.alpha_hit = 0.74
@@ -49,8 +49,10 @@ class SensorModel:
 
         # Precompute the sensor model table
         self.sensor_model_table = np.empty((self.table_width, self.table_width))
-        self.precompute_sensor_model()
-
+        #self.precompute_sensor_model()
+        #np.save('sensor_model_table.npy', self.sensor_model_table)
+        self.sensor_model_table = np.load('sensor_model_table.npy')
+	
         # Create a simulated laser scan
         self.scan_sim = PyScanSimulator2D(
             self.num_beams_per_particle,
@@ -125,7 +127,7 @@ class SensorModel:
 
         z_max = self.table_width - 1
 
-        for d_px in trange(self.table_width):
+        for d_px in range(self.table_width):
             for zk_px in range(self.table_width):
                 self.sensor_model_table[zk_px][d_px] = p_total(zk_px, d_px, z_max)
         

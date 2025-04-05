@@ -3,7 +3,7 @@ from localization.motion_model import MotionModel
 
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import PoseWithCovarianceStamped, Quaternion
+from geometry_msgs.msg import PoseWithCovarianceStamped, Quaternion, Pose
 import tf_transformations as tf
 
 from rclpy.node import Node
@@ -63,6 +63,7 @@ class ParticleFilter(Node):
         #     "/map" frame.
 
         self.odom_pub = self.create_publisher(Odometry, "/pf/pose/odom", 1)
+        #self.particle_pub = self.create_publisher(ParticleCloud
 
         # Initialize the models
         self.get_logger().info("before init models")
@@ -91,20 +92,20 @@ class ParticleFilter(Node):
         # and the particle_filter_frame.
 
     def laser_callback(self, msg):
-        self.get_logger().info("laser callback1")
+        #self.get_logger().info("laser callback1")
         if len(self.particles)==0:#no particles
             return
-        self.get_logger().info("laser callback2")
+        #self.get_logger().info("laser callback2")
 
         full_range = np.array(msg.ranges)
         if len(full_range) == 0:
             return
         mask = (np.linspace(0, len(full_range)-1, 99)).astype(int)#self.sensor_model.num_beams_per_particle)).astype(int)
         actual_range = full_range[mask]
-        self.get_logger().info(f"{mask}")
+        #self.get_logger().info(f"{mask}")
 
         self.probabilities = self.sensor_model.evaluate(self.particles, actual_range)
-        self.get_logger().info("after evaluate")
+        #self.get_logger().info("after evaluate")
         if self.probabilities is None:
             self.get_logger().info("no probabilities")
             return
@@ -124,6 +125,7 @@ class ParticleFilter(Node):
 
         dt = (self.get_clock().now() - self.cur_time).nanoseconds * 1e-9
         self.cur_time = self.get_clock().now()
+        self.get_logger().info(f'{dt=}')
         x = msg.twist.twist.linear.x
         dx = -x*dt
         y = msg.twist.twist.linear.y
@@ -151,6 +153,8 @@ class ParticleFilter(Node):
         avg_theta_x = np.average(np.cos(self.particles[:, 2]), weights=self.probabilities)
         avg_theta_y = np.average(np.sin(self.particles[:, 2]), weights=self.probabilities)
         theta_avg = np.arctan2(avg_theta_y, avg_theta_x)
+        
+        self.get_logger().info(f'{x_avg=} {y_avg=} {theta_avg=}')
 
         odom_msg = Odometry()
         odom_msg.header.stamp = self.get_clock().now().to_msg()
