@@ -221,9 +221,24 @@ class ParticleFilter(Node):
             free_y, free_x = free_space
             
             # Convert to world coordinates
-            world_x = free_x * resolution - origin_x
-            world_y = free_y * resolution - origin_y
-
+            # First create rotation matrix from origin orientation
+            origin_theta = tf.euler_from_quaternion((
+                stata.info.origin.orientation.x,
+                stata.info.origin.orientation.y,
+                stata.info.origin.orientation.z,
+                stata.info.origin.orientation.w))[2]
+            
+            rotation_matrix = np.array([
+                [np.cos(origin_theta), -np.sin(origin_theta)],
+                [np.sin(origin_theta), np.cos(origin_theta)]
+            ])
+            
+            # Apply rotation and translation
+            coords = np.vstack((free_x * resolution, free_y * resolution))
+            rotated_coords = np.dot(rotation_matrix, coords)
+            world_x = rotated_coords[0] + origin_x
+            world_y = rotated_coords[1] + origin_y
+            
             # Randomly sample from free space
             indices = np.random.choice(len(world_x), self.num_particles)
             x_samples = world_x[indices]
