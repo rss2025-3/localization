@@ -67,10 +67,10 @@ class ParticleFilter(Node):
             self.get_logger().info("Waiting for map...")
             rclpy.spin_once(self, timeout_sec=1.0)
         
-        self.clicked_sub = self.create_subscription(PoseStamped,
-                                                    "/clicked_point",
-                                                    self.initialize_particles,
-                                                    1)
+        #self.clicked_sub = self.create_subscription(PoseStamped,
+        #                                            "/clicked_point",
+        #                                            self.initialize_particles,
+        #                                            1)
 
         self.laser_sub = self.create_subscription(LaserScan, scan_topic,
                                                   self.laser_callback,
@@ -91,7 +91,10 @@ class ParticleFilter(Node):
         self.probabilities = np.ones(self.num_particles) / self.num_particles
         self.get_logger().info("before init particles")
 
-        self.initialize_particles()
+        self.laser_counter = 0
+
+        #self.initialize_particles()
+        self.particles = np.zeros((self.num_particles, 3))
 
         self.get_logger().info("=============+READY+=============")
 
@@ -106,29 +109,34 @@ class ParticleFilter(Node):
         # and the particle_filter_frame.
 
     def laser_callback(self, msg):
-        #self.get_logger().info("laser callback1")
         if len(self.particles)==0:#no particles
             return
-        #self.get_logger().info("laser callback2")
 
         full_range = np.array(msg.ranges)
         if len(full_range) == 0:
             return
         mask = (np.linspace(0, len(full_range)-1, 99)).astype(int)#self.sensor_model.num_beams_per_particle)).astype(int)
         actual_range = full_range[mask]
-        #self.get_logger().info(f"{mask}")
 
-        #self.probabilities = self.sensor_model.evaluate(self.particles, actual_range)
-        self.probabilities = None
+        self.probabilities = self.sensor_model.evaluate(self.particles, actual_range)
+        self.probabilities = self.probabilities ** (1/3)
+        self.probabilities = self.probabilities/sum(self.probabilities)
 
-        #self.get_logger().info("after evaluate")
+        #self.probabilities = None
+
         if self.probabilities is None:
             self.get_logger().info("no probabilities")
             return
         self.probabilities/=sum(self.probabilities)
+
+        self.get_logger().info(f"{self.probabilities}")
+        self.get_logger().info(f"{self.particles}")
         
-        index = np.random.choice(self.num_particles, self.num_particles, True, self.probabilities)
-        self.particles = self.particles[index]
+        if (self.laser_counter % 100):
+            index = np.random.choice(self.num_particles, self.num_particles, True, self.probabilities)
+            self.particles = self.particles[index]
+
+        self.laser_counter += 1
 
         self.publish_pose()
 
@@ -137,11 +145,8 @@ class ParticleFilter(Node):
         if len(self.particles)==0:
             return
         
-        self.get_logger().info("odom callback")
-
         dt = (self.get_clock().now() - self.cur_time).nanoseconds * 1e-9
         self.cur_time = self.get_clock().now()
-        self.get_logger().info(f'{dt=}')
         x = msg.twist.twist.linear.x
         dx = -x*dt
         y = msg.twist.twist.linear.y
@@ -153,7 +158,6 @@ class ParticleFilter(Node):
         self.publish_pose()
 
     def pose_callback(self, msg):
-        self.get_logger().info("pose callback")
         x = msg.pose.pose.position.x
         y = msg.pose.pose.position.y
         theta = tf.euler_from_quaternion((msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w))[2]
