@@ -8,3 +8,4 @@ scan_simulator_2d.cpp
 .vscode/
 CATKIN_IGNORE
 .venv/*
+rosbags/*

@@ -37,7 +37,7 @@ class ParticleFilter(Node):
 
         scan_topic = self.get_parameter("scan_topic").get_parameter_value().string_value
         odom_topic = self.get_parameter("odom_topic").get_parameter_value().string_value
-        odom_topic = "/vesc/odom"
+
         self.get_logger().info(f"{odom_topic}")
 
         #  *Important Note #2:* You must respond to pose
@@ -124,8 +124,8 @@ class ParticleFilter(Node):
             return
         self.probabilities/=sum(self.probabilities)
 
-        self.get_logger().info(f"{self.probabilities}")
-        self.get_logger().info(f"{self.particles}")
+        #self.get_logger().info(f"{self.probabilities}")
+        #self.get_logger().info(f"{self.particles}")
         
         if (self.laser_counter % 100):
             index = np.random.choice(self.num_particles, self.num_particles, True, self.probabilities)
