@@ -67,11 +67,6 @@ class ParticleFilter(Node):
             self.get_logger().info("Waiting for map...")
             rclpy.spin_once(self, timeout_sec=1.0)
         
-        #self.clicked_sub = self.create_subscription(PoseStamped,
-        #                                            "/clicked_point",
-        #                                            self.initialize_particles,
-        #                                            1)
-
         self.laser_sub = self.create_subscription(LaserScan, scan_topic,
                                                   self.laser_callback,
                                                   1)
