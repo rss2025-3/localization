@@ -85,6 +85,7 @@ class ParticleFilter(Node):
         self.num_particles = self.get_parameter('num_particles').get_parameter_value().integer_value
         self.probabilities = np.ones(self.num_particles) / self.num_particles
         self.get_logger().info("before init particles")
+        self.odom_only = False
 
         self.laser_counter = 0
 
@@ -105,6 +106,9 @@ class ParticleFilter(Node):
 
     def laser_callback(self, msg):
         if len(self.particles)==0:#no particles
+            return
+        
+        if self.odom_only:
             return
 
         full_range = np.array(msg.ranges)
@@ -127,6 +131,7 @@ class ParticleFilter(Node):
         self.get_logger().info(f"{self.probabilities}")
         self.get_logger().info(f"{self.particles}")
         
+        #this looks wrong
         if (self.laser_counter % 100):
             index = np.random.choice(self.num_particles, self.num_particles, True, self.probabilities)
             self.particles = self.particles[index]
@@ -149,7 +154,11 @@ class ParticleFilter(Node):
         theta = msg.twist.twist.angular.z
         dtheta = -theta*dt
 
-        self.particles = self.motion_model.evaluate(self.particles,[dx,dy,dtheta])
+        #if odom only, process without noise
+        if self.odom_only:
+            self.particles = self.motion_model.evaluate(self.particles,[dx,dy,dtheta], noise=(0.,0.,0.))
+        else:
+            self.particles = self.motion_model.evaluate(self.particles,[dx,dy,dtheta])
         self.publish_pose()
 
     def pose_callback(self, msg):
@@ -164,6 +173,13 @@ class ParticleFilter(Node):
 
     def publish_pose(self):
         x_avg = np.average(self.particles[:,0], weights=self.probabilities)
+
+        #added to turn sensor model off
+        if x_avg <= -45.0:
+            self.odom_only = True
+        else:
+            self.odom_only = False
+
         y_avg = np.average(self.particles[:,1], weights=self.probabilities)
         avg_theta_x = np.average(np.cos(self.particles[:, 2]), weights=self.probabilities)
         avg_theta_y = np.average(np.sin(self.particles[:, 2]), weights=self.probabilities)

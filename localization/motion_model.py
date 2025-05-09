@@ -11,7 +11,7 @@ class MotionModel:
 
         ####################################
 
-    def evaluate(self, particles, odometry):
+    def evaluate(self, particles, odometry, noise=(0.1, 0.1, 0.1)):
         """
         Update the particles to reflect probable
         future states given the odometry data.
@@ -36,7 +36,7 @@ class MotionModel:
         dx, dy, dtheta = odometry
 
         # Extract noise standard deviations
-        std_dx, std_dy, std_dtheta = self.noise_std
+        std_dx, std_dy, std_dtheta = noise
 
         # Generate noise for each particle's movement
         noise_dx = np.random.randn(particles.shape[0]) * std_dx
